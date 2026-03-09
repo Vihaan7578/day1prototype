@@ -1,3 +1,19 @@
+@import "tailwindcss";
+
+/* Custom theme */
+@theme {
+  --color-brand-orange: #FF6B00;
+  --color-brand-red: #EA580C;
+  --color-brand-bg: #0F172A;
+  --color-brand-surface: rgba(30, 41, 59, 0.7);
+  --color-brand-text: #F8FAFC;
+  --color-brand-muted: #94A3B8;
+  --color-brand-success: #10B981;
+
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Poppins', sans-serif;
+}
+
 /* Base Reset & Custom Styles */
 *, *::before, *::after {
   box-sizing: border-box;
