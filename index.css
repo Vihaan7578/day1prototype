@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Custom theme */
+/* Custom theme - extends Tailwind's design tokens */
 @theme {
   --color-brand-orange: #FF6B00;
   --color-brand-red: #EA580C;
@@ -14,43 +14,53 @@
   --font-display: 'Poppins', sans-serif;
 }
 
-/* Base Reset & Custom Styles */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/*
+ * All custom styles MUST be in @layer base so they have LOWER priority
+ * than Tailwind utilities. Unlayered CSS overrides @layer utilities
+ * which broke mx-auto, padding, margins, etc.
+ */
+@layer base {
+  body {
+    background-color: #0F172A;
+    color: #F8FAFC;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0F172A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+  }
 }
 
-body {
-  background-color: #0F172A;
-  color: #F8FAFC;
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Utility-level custom classes go in @layer utilities */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0F172A;
-}
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
-}
-
-/* Hide scrollbar helper */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Animations */
+/* Keyframes don't participate in the cascade, safe outside layers */
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -65,12 +75,4 @@ body {
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
 }
