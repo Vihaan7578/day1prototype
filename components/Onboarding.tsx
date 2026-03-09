@@ -106,7 +106,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-brand-bg relative overflow-hidden w-full max-w-lg mx-auto">
+    <div className="flex flex-col h-screen bg-brand-bg relative overflow-hidden max-w-md mx-auto" style={{ transform: 'scale(0.92)', transformOrigin: 'top center' }}>
       {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-brand-orange rounded-full filter blur-[100px] opacity-20"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-brand-red rounded-full filter blur-[100px] opacity-20"></div>
