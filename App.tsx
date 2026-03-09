@@ -63,14 +63,14 @@ const App: React.FC = () => {
   return (
     <div className="bg-brand-bg min-h-screen text-brand-text font-sans selection:bg-brand-orange selection:text-white">
       {/* Main Content Area */}
-      <main className="max-w-md mx-auto min-h-screen bg-brand-bg shadow-2xl relative overflow-hidden">
+      <main className="w-full max-w-lg mx-auto min-h-screen bg-brand-bg shadow-2xl relative overflow-hidden">
         {/* Ambient Background Glows */}
         <div className="fixed top-0 left-0 w-full h-32 bg-gradient-to-b from-brand-orange/5 to-transparent pointer-events-none" />
         
         {renderContent()}
 
         {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 h-20 pb-4 z-50">
+        <div className="fixed bottom-0 left-0 right-0 w-full max-w-lg mx-auto bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 h-20 pb-4 z-50">
           <div className="flex justify-around items-center h-full px-2">
             <NavItem id="home" icon={Home} label="Home" />
             <NavItem id="meals" icon={Utensils} label="Meals" />
