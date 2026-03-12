@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type, Schema, } from "@google/genai";
 import { UserProfile, DailyPlan, MuscleExercise } from "../types";
 
 const API_KEY = process.env.API_KEY || process.env.GEMINI_API_KEY || '';
@@ -16,7 +16,7 @@ function getAI(): GoogleGenAI | null {
   return ai;
 }
 
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 // Fallback demo data when API key is missing
 const DEMO_MEAL_PLAN: DailyPlan = {
@@ -37,15 +37,20 @@ const DEMO_RECOVERY = {
   movementTips: ["Avoid high-impact activities", "Focus on gentle stretching", "Use ice/heat therapy as needed"]
 };
 
-export const generateRegionalMealPlan = async (user: UserProfile): Promise<DailyPlan | null> => {
+export const generateRegionalMealPlan = async (user: UserProfile, craving?: string): Promise<DailyPlan | null> => {
   const client = getAI();
   if (!client) return DEMO_MEAL_PLAN;
 
+  const cravingText = craving ? `The user explicitly requested: "${craving}". Accommodate this request in the meal plan if possible.` : '';
+
   const prompt = `
-    Act as an expert Indian nutritionist. Create a one-day meal plan for a user with the following profile:
+    [Random Seed: ${Date.now()}]
+    Act as an expert Indian nutritionist. Create a completely UNIQUE one-day meal plan for a user with the following profile:
     Age: ${user.age}, Gender: ${user.gender}, Region: ${user.region}, Diet: ${user.diet}.
     Focus on authentic regional dishes from ${user.region}.
+    ${cravingText}
     Provide Breakfast, Lunch, Snack, and Dinner.
+    Ensure this plan is DIFFERENT from standard answers. Be creative with the dishes.
   `;
 
   const mealItemSchema: Schema = {
@@ -79,6 +84,9 @@ export const generateRegionalMealPlan = async (user: UserProfile): Promise<Daily
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
+        thinkingConfig: {
+           thinkingLevel: 'HIGH'
+        } as any, // Bypass TS Error if old genai package
       },
     });
 
@@ -86,7 +94,14 @@ export const generateRegionalMealPlan = async (user: UserProfile): Promise<Daily
       return JSON.parse(response.text) as DailyPlan;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    const errorBody = (error?.message || String(error)).toLowerCase();
+    const isRateLimit = errorBody.includes("429") || errorBody.includes("quota") || error?.status === 429;
+    
+    if (isRateLimit) {
+       throw new Error("RATE_LIMIT_ERROR");
+    }
+    
     console.error("Gemini Meal Plan Error:", error);
     return DEMO_MEAL_PLAN;
   }
@@ -97,10 +112,11 @@ export const generateWorkoutAdvice = async (muscleGroup: string, injury: string)
   if (!client) return DEMO_EXERCISES;
 
   const prompt = `
-    Suggest 3 exercises for the ${muscleGroup}.
+    [Random Seed: ${Date.now()}]
+    Suggest 3 completely UNIQUE and varied exercises for the ${muscleGroup}.
     User injury status: ${injury}.
     If the user has an injury, provide safe alternatives or rehab-focused movements.
-    Return a list of 3 exercises.
+    Return a list of 3 exercises. Never return the exact same 3 exercises twice in a row.
   `;
 
   const responseSchema: Schema = {
@@ -124,6 +140,9 @@ export const generateWorkoutAdvice = async (muscleGroup: string, injury: string)
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
+        thinkingConfig: {
+           thinkingLevel: 'HIGH'
+        } as any,
       },
     });
 
@@ -131,7 +150,14 @@ export const generateWorkoutAdvice = async (muscleGroup: string, injury: string)
       return JSON.parse(response.text) as MuscleExercise[];
     }
     return [];
-  } catch (error) {
+  } catch (error: any) {
+    const errorBody = (error?.message || String(error)).toLowerCase();
+    const isRateLimit = errorBody.includes("429") || errorBody.includes("quota") || error?.status === 429;
+    
+    if (isRateLimit) {
+       throw new Error("RATE_LIMIT_ERROR");
+    }
+    
     console.error("Gemini Workout Error:", error);
     return DEMO_EXERCISES;
   }
@@ -166,6 +192,9 @@ export const generateRecoveryTips = async (injury: string): Promise<{ foodFocus:
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
+        thinkingConfig: {
+           thinkingLevel: 'HIGH'
+        } as any,
       },
     });
 
@@ -173,9 +202,126 @@ export const generateRecoveryTips = async (injury: string): Promise<{ foodFocus:
       return JSON.parse(response.text);
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    const errorBody = (error?.message || String(error)).toLowerCase();
+    const isRateLimit = errorBody.includes("429") || errorBody.includes("quota") || error?.status === 429;
+    
+    if (isRateLimit) {
+       throw new Error("RATE_LIMIT_ERROR");
+    }
+    
     console.error("Gemini Recovery Error:", error);
     return DEMO_RECOVERY;
   }
 }
 
+export const modifyMealPlan = async (currentPlan: DailyPlan, instruction: string): Promise<DailyPlan | null> => {
+  const client = getAI();
+  if (!client) return DEMO_MEAL_PLAN; // Fallback
+
+  const prompt = `
+    Here is the current meal plan:
+    ${JSON.stringify(currentPlan, null, 2)}
+    
+    The user wants to make a change: "${instruction}".
+    
+    Please return the updated meal plan, keeping the structure the same but applying the requested changes.
+  `;
+
+  // We reuse the same schemas established in generateRegionalMealPlan
+  const mealItemSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      name: { type: Type.STRING },
+      calories: { type: Type.NUMBER },
+      protein: { type: Type.NUMBER },
+      carbs: { type: Type.NUMBER },
+      fat: { type: Type.NUMBER },
+      description: { type: Type.STRING },
+    },
+    required: ["name", "calories", "protein", "carbs", "fat", "description"],
+  };
+
+  const responseSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      breakfast: mealItemSchema,
+      lunch: mealItemSchema,
+      snack: mealItemSchema,
+      dinner: mealItemSchema,
+    },
+    required: ["breakfast", "lunch", "snack", "dinner"],
+  };
+
+  try {
+    const response = await client.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        thinkingConfig: {
+           thinkingLevel: 'HIGH'
+        } as any,
+      },
+    });
+
+    if (response.text) return JSON.parse(response.text) as DailyPlan;
+    return null;
+  } catch (error: any) {
+    const errorBody = (error?.message || String(error)).toLowerCase();
+    const isRateLimit = errorBody.includes("429") || errorBody.includes("quota") || error?.status === 429;
+    
+    if (isRateLimit) {
+       throw new Error("RATE_LIMIT_ERROR");
+    }
+    
+    console.error("Meal Modification Error:", error);
+    return null;
+  }
+};
+
+export const generateGroceryList = async (plan: DailyPlan): Promise<string[]> => {
+  const client = getAI();
+  const DEMO_GROCERIES = ["Oats", "Mixed Vegetables", "Kidney Beans (Rajma)", "Rice", "Mixed Sprouts", "Onion", "Tomato", "Paneer", "Whole Wheat Flour"];
+  if (!client) return DEMO_GROCERIES;
+
+  const prompt = `
+    Extract a clean, deduplicated grocery shopping list from this meal plan:
+    ${JSON.stringify(plan, null, 2)}
+    
+    Return an array of ingredient names.
+  `;
+
+  const responseSchema: Schema = {
+    type: Type.ARRAY,
+    items: { type: Type.STRING }
+  };
+
+  try {
+    const response = await client.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        thinkingConfig: {
+           thinkingLevel: 'HIGH'
+        } as any,
+      },
+    });
+
+    if (response.text) return JSON.parse(response.text) as string[];
+    return [];
+  } catch (error: any) {
+    const errorBody = (error?.message || String(error)).toLowerCase();
+    const isRateLimit = errorBody.includes("429") || errorBody.includes("quota") || error?.status === 429;
+    
+    if (isRateLimit) {
+       throw new Error("RATE_LIMIT_ERROR");
+    }
+    
+    console.error("Grocery List Error:", error);
+    return DEMO_GROCERIES;
+  }
+};

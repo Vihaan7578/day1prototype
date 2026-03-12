@@ -1,5 +1,7 @@
 # DayOne
 
+> **⚠️ Live Demo Notice:** The Vercel deployment of this app runs entirely on **fallback demo data** because the Google Gemini AI API requires a secret key with an active billing account, which is not exposed to the public internet for security reasons. To experience the real dynamic AI generation features, you **must run this application locally** with your own API key.
+
 DayOne is a mobile-first wellness web app built for the Indian market. It uses Google Gemini AI to provide personalized nutrition, fitness, and recovery plans based on the user's region, diet, and injury status.
 
 ## Features

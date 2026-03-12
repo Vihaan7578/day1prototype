@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import NutritionLab from './components/NutritionLab';
 import FitnessStudio from './components/FitnessStudio';
 import RecoveryHub from './components/RecoveryHub';
+import Profile from './components/Profile';
 import { Home, Utensils, Dumbbell, HeartPulse, User } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -13,9 +14,25 @@ const App: React.FC = () => {
 
   // Load user from local storage on mount (simulated persistence)
   useEffect(() => {
-    const savedUser = localStorage.getItem('dayone_user');
-    if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    const savedUserStr = localStorage.getItem('dayone_user');
+    if (savedUserStr) {
+        const savedUser = JSON.parse(savedUserStr) as UserProfile;
+        const todayStr = new Date().toDateString();
+        
+        // Reset daily metrics if it's a new day
+        if (savedUser.lastActiveDate !== todayStr) {
+           const updatedUser = {
+             ...savedUser,
+             waterIntake: 0,
+             snacksLogged: 0,
+             loggedMeals: [],
+             lastActiveDate: todayStr
+           };
+           setUser(updatedUser);
+           localStorage.setItem('dayone_user', JSON.stringify(updatedUser));
+        } else {
+           setUser(savedUser);
+        }
     }
   }, []);
 
@@ -23,7 +40,10 @@ const App: React.FC = () => {
     const enrichedProfile = {
       ...profile,
       waterIntake: 0,
-      waterGoal: 3000
+      waterGoal: 3000,
+      snacksLogged: 0,
+      loggedMeals: [],
+      lastActiveDate: new Date().toDateString()
     };
     setUser(enrichedProfile);
     localStorage.setItem('dayone_user', JSON.stringify(enrichedProfile));
@@ -41,10 +61,11 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'home': return <Dashboard user={user} onUpdateUser={updateUser} />;
-      case 'meals': return <NutritionLab user={user} />;
+      case 'meals': return <NutritionLab user={user} onUpdateUser={updateUser} />;
       case 'train': return <FitnessStudio user={user} />;
       case 'recover': return <RecoveryHub user={user} />;
-      default: return <Dashboard user={user} />;
+      case 'profile': return <Profile user={user} onUpdateUser={updateUser} />;
+      default: return <Dashboard user={user} onUpdateUser={updateUser}/>;
     }
   };
 

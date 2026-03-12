@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Droplet, Plus, Calendar, ChevronRight, HeartPulse } from 'lucide-react';
@@ -9,10 +9,33 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
+  // --- Dynamic Wellness Score Calculation ---
+  let wellnessScore = 10; // Base
+  
+  if (user.sleepHours && user.sleepQuality) {
+      const hoursScore = Math.min(15, (user.sleepHours / 7.5) * 15);
+      const qualityScore = Math.min(15, (user.sleepQuality / 85) * 15);
+      wellnessScore += (hoursScore + qualityScore);
+  }
+  
+  const hydrationRatio = Math.min(1, (user.waterIntake || 0) / (user.waterGoal || 3000));
+  wellnessScore += (hydrationRatio * 30);
+  
+  const mealsLoggedCount = user.loggedMeals?.length || 0;
+  wellnessScore += Math.min(30, mealsLoggedCount * 7.5);
+  
+  const snacks = user.snacksLogged || 0;
+  if (snacks > 1) {
+      wellnessScore -= ((snacks - 1) * 2);
+  }
+  
+  wellnessScore = Math.max(0, Math.min(100, Math.round(wellnessScore)));
+
   const data = [
-    { name: 'Done', value: 65 },
-    { name: 'Remaining', value: 35 },
+    { name: 'Done', value: wellnessScore },
+    { name: 'Remaining', value: 100 - wellnessScore },
   ];
+
   const COLORS = ['#FF6B00', '#1E293B'];
 
   const waterIntake = user.waterIntake || 0;
@@ -23,6 +46,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     onUpdateUser({
       ...user,
       waterIntake: waterIntake + amount
+    });
+  };
+
+  const [showSleepModal, setShowSleepModal] = useState(user.sleepHours === undefined);
+  const [sleepInput, setSleepInput] = useState(user.sleepHours?.toString() || '7');
+  const [sleepQualityInput, setSleepQualityInput] = useState(user.sleepQuality?.toString() || '80');
+
+  const logSleep = () => {
+    onUpdateUser({
+       ...user,
+       sleepHours: parseFloat(sleepInput),
+       sleepQuality: parseInt(sleepQualityInput)
+    });
+    setShowSleepModal(false);
+  };
+
+  const logSnack = () => {
+    onUpdateUser({
+       ...user,
+       snacksLogged: (user.snacksLogged || 0) + 1
     });
   };
 
@@ -42,8 +85,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       {/* Daily Score Ring */}
       <div className="bg-brand-surface backdrop-blur-md border border-slate-700 rounded-3xl p-6 relative overflow-hidden">
         <h3 className="text-slate-400 text-sm font-medium mb-2">Daily Wellness Score</h3>
-        <div className="h-48 w-full relative z-10">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="relative z-10 w-full min-h-[200px] flex justify-center items-center">
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
                 data={data}
@@ -63,9 +106,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             </PieChart>
           </ResponsiveContainer>
           {/* Center Text */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-            <span className="text-3xl font-display font-bold text-white">65</span>
-            <span className="text-xs text-slate-400 block">%</span>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center mt-1">
+            <span className="text-3xl font-display font-bold text-white">{wellnessScore}</span>
+            <span className="text-xs text-slate-400 block -mt-1">%</span>
           </div>
         </div>
         
@@ -138,30 +181,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             </div>
         </div>
 
-        {/* Quick Workout */}
-        <div className="bg-brand-surface p-4 rounded-2xl border border-slate-700 flex flex-col justify-between h-32 relative group cursor-pointer overflow-hidden">
+        {/* Quick Workout / Snack Log */}
+        <div 
+          onClick={logSnack}
+          className="bg-brand-surface p-4 rounded-2xl border border-slate-700 flex flex-col justify-between h-32 relative group cursor-pointer overflow-hidden active:scale-95 transition-transform"
+        >
              <div className="absolute inset-0 bg-brand-orange/5 group-hover:bg-brand-orange/10 transition-colors"></div>
              <div className="p-2 bg-brand-orange/20 rounded-lg text-brand-orange w-fit z-10">
                 <Plus size={18} />
              </div>
              <div className="z-10">
                 <h4 className="text-white font-bold text-sm">Quick Log</h4>
-                <p className="text-xs text-slate-400">Add snack or workout</p>
+                <p className="text-xs text-slate-400">Snacks Today: {user.snacksLogged || 0}</p>
              </div>
         </div>
 
-        {/* Sleep Tracker (Placeholder for grid balance) */}
-        <div className="bg-brand-surface p-4 rounded-2xl border border-slate-700 flex flex-col justify-between h-32">
+        {/* Sleep Tracker */}
+        <div 
+          onClick={() => setShowSleepModal(true)}
+          className="bg-brand-surface p-4 rounded-2xl border border-slate-700 flex flex-col justify-between h-32 cursor-pointer hover:border-indigo-500/50 transition-colors"
+        >
             <div className="flex justify-between items-start">
                 <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
                     <HeartPulse size={18} />
                 </div>
-                <span className="text-white font-bold">7h 20m</span>
+                <span className="text-white font-bold">{user.sleepHours !== undefined ? `${user.sleepHours}h` : '--h'}</span>
             </div>
             <div>
-                 <p className="text-xs text-slate-400 mb-2">Sleep Quality: 85%</p>
+                 <p className="text-xs text-slate-400 mb-2">Sleep Quality: {user.sleepQuality !== undefined ? `${user.sleepQuality}%` : '--%'}</p>
                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full w-[85%]"></div>
+                    <div className="bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${user.sleepQuality || 0}%` }}></div>
                  </div>
             </div>
         </div>
@@ -177,6 +226,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             <h4 className="text-white text-sm font-medium">Myths of Protein w/ Dr. Sharma (for demo purposes only)</h4>
         </div>
       </div>
+
+      {/* Sleep Input Modal */}
+      {showSleepModal && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-6 relative animate-slide-up">
+                <h3 className="text-2xl font-display font-bold text-white mb-4">Log Sleep</h3>
+                
+                <div className="space-y-4">
+                   <div>
+                     <label className="text-xs text-slate-400 uppercase tracking-wider">Hours Slept</label>
+                     <input 
+                       type="number" 
+                       value={sleepInput}
+                       onChange={e => setSleepInput(e.target.value)}
+                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 mt-1 text-white focus:outline-none focus:border-indigo-500"
+                     />
+                   </div>
+                   <div>
+                     <label className="text-xs text-slate-400 uppercase tracking-wider">Quality (0-100%)</label>
+                     <input 
+                       type="number" 
+                       value={sleepQualityInput}
+                       onChange={e => setSleepQualityInput(e.target.value)}
+                       className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 mt-1 text-white focus:outline-none focus:border-indigo-500"
+                     />
+                   </div>
+                   <button 
+                     onClick={logSleep}
+                     className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-2 hover:bg-indigo-500 transition-colors"
+                   >
+                     Save Sleep Data
+                   </button>
+                </div>
+            </div>
+         </div>
+      )}
     </div>
   );
 };

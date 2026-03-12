@@ -32,6 +32,11 @@ export interface UserProfile {
   isOnboarded: boolean;
   waterIntake?: number; // in ml
   waterGoal?: number; // in ml
+  sleepHours?: number; 
+  sleepQuality?: number; // percentage
+  snacksLogged?: number;
+  loggedMeals?: string[]; // IDs or names of meals eaten today (e.g. 'breakfast', 'lunch')
+  lastActiveDate?: string; // ISO date string strictly for local day tracking
 }
 
 export interface MealItem {
