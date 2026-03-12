@@ -25,8 +25,8 @@ Make sure you have [Node.js](https://nodejs.org/) installed, then follow these s
 
 1. **Clone the repo:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/DayOnePrototype-main.git
-   cd DayOnePrototype-main
+   git clone https://github.com/Vihaan7578/day1prototype.git
+   cd day1prototype
    ```
 
 2. **Install dependencies:**
